@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<main class="page-layout">
+    <div class="page-header">
+        <a href="{% url 'home' %}" class="back-link">← Volver</a>
+        <h1>Para Ver</h1>
+    </div>
+
+    <div class="widget watchlist-widget full-page-widget">
+        <div class="widget-header">
+            <h3>Lista</h3>
+            <button onclick="toggleWatchForm()" class="btn-sm">+ Agregar</button>
+        </div>
+        <div id="watch-form" class="hidden-form" style="display:none;">
+            <form action="{% url 'add_watch_item' %}" method="post">
+                {% csrf_token %}
+                <input type="text" name="title" placeholder="Título" required>
+                <select name="item_type">
+                    <option value="MOVIE">Película</option>
+                    <option value="SERIES">Serie</option>
+                    <option value="VIDEO">Video</option>
+                </select>
+                <button type="submit" class="btn-sm">Guardar</button>
+            </form>
+        </div>
+        <div class="watch-list">
+            {% for item in watchlist %}
+            <div class="watch-card {% if item.is_watched %}watched{% endif %}">
+                <a href="{% url 'toggle_watched' item.id %}" class="toggle-btn" title="Marcar como visto">
+                    {% if item.is_watched %}✓{% else %}○{% endif %}
+                </a>
+                <div class="watch-info">
+                    <strong>{{ item.title }}</strong>
+                    <span class="tag-type">{{ item.get_item_type_display }}</span>
+
+                    <!-- Reviews Section -->
+                    <div class="reviews-section">
+                        {% for review in item.reviews.all %}
+                        <div class="review-bubble">
+                            <div class="review-header">
+                                <span>{{ review.user.username }}</span>
+                                <span class="review-rating">
+                                    {% if review.rating >= 1 %}★{% endif %}
+                                    {% if review.rating >= 2 %}★{% endif %}
+                                    {% if review.rating >= 3 %}★{% endif %}
+                                    {% if review.rating >= 4 %}★{% endif %}
+                                    {% if review.rating >= 5 %}★{% endif %}
+                                </span>
+                            </div>
+                            <p style="margin:0;">{{ review.comment }}</p>
+                        </div>
+                        {% endfor %}
+
+                        <!-- Add Review Toggle -->
+                        <details style="margin-top: 10px;">
+                            <summary style="cursor:pointer; font-size:0.8rem; opacity:0.7;">✎ Dejar opinión</summary>
+                            <form action="{% url 'add_review' item.id %}" method="post" style="margin-top:10px;">
+                                {% csrf_token %}
+                                <div class="star-rating">
+                                    <input type="radio" id="star5-{{ item.id }}" name="rating" value="5"><label
+                                        for="star5-{{ item.id }}">★</label>
+                                    <input type="radio" id="star4-{{ item.id }}" name="rating" value="4"><label
+                                        for="star4-{{ item.id }}">★</label>
+                                    <input type="radio" id="star3-{{ item.id }}" name="rating" value="3"><label
+                                        for="star3-{{ item.id }}">★</label>
+                                    <input type="radio" id="star2-{{ item.id }}" name="rating" value="2"><label
+                                        for="star2-{{ item.id }}">★</label>
+                                    <input type="radio" id="star1-{{ item.id }}" name="rating" value="1"><label
+                                        for="star1-{{ item.id }}">★</label>
+                                </div>
+                                <textarea name="comment" placeholder="¿Qué te pareció?"
+                                    style="width:100%; border-radius:8px; border:none; padding:8px; margin-bottom:5px; background:rgba(255,255,255,0.5);"
+                                    required></textarea>
+                                <button type="submit" class="btn-review-submit" style="width:100%;">Publicar</button>
+                            </form>
+                        </details>
+                    </div>
+                </div>
+                <!-- Delete Button -->
+                <form action="{% url 'delete_watch_item' item.id %}" method="post" style="margin-left:auto;">
+                    {% csrf_token %}
+                    <button type="submit" class="delete-icon">×</button>
+                </form>
+            </div>
+            {% empty %}
+            <p class="empty-state">Nada para ver.</p>
+            {% endfor %}
+        </div>
+    </div>
+</main>
+{% endblock %}

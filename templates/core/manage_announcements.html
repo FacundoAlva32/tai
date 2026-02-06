@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<main class="page-layout">
+    <div class="page-header">
+        <a href="{% url 'home' %}" class="back-link">← Volver al Dashboard</a>
+        <h1>Gestionar Anuncios</h1>
+    </div>
+
+    <!-- Add New Announcement -->
+    <div class="widget full-page-widget" style="margin-bottom: 20px;">
+        <div class="widget-header">
+            <h3>Crear Nuevo Anuncio</h3>
+        </div>
+        <form action="{% url 'add_announcement' %}" method="post" class="auth-form" style="max-width: 100%;">
+            {% csrf_token %}
+            <div class="form-group">
+                <input type="text" name="title" placeholder="Título" required
+                    style="width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1);">
+            </div>
+            <div class="form-group">
+                <textarea name="content" placeholder="Contenido del anuncio..." required rows="4"
+                    style="width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1);"></textarea>
+            </div>
+            <div class="form-group">
+                <label style="display:block; font-size:0.8rem; margin-bottom:5px;">Momento del día</label>
+                <select name="time_of_day" required
+                    style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1);">
+                    <option value="ALL">Todo el día</option>
+                    <option value="MORNING">Mañana (5:00 - 12:00)</option>
+                    <option value="AFTERNOON">Tarde (12:00 - 20:00)</option>
+                    <option value="EVENING">Noche (20:00 - 5:00)</option>
+                </select>
+            </div>
+            <button type="submit" class="btn-primary" style="width: 100%; margin-top: 10px;">Publicar Anuncio</button>
+        </form>
+    </div>
+
+    <!-- List Existing -->
+    <div class="widget full-page-widget">
+        <div class="widget-header">
+            <h3>Historial de Anuncios</h3>
+        </div>
+        <div class="announcement-list">
+            {% for announcement in announcements %}
+            <div class="watch-card" style="display: block;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+                    <strong>{{ announcement.title }}</strong>
+                    <form action="{% url 'delete_announcement' announcement.id %}" method="post"
+                        style="display:inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="delete-icon">×</button>
+                    </form>
+                </div>
+                <p style="font-size: 0.9rem; margin-bottom: 10px;">{{ announcement.content }}</p>
+                <div
+                    style="font-size: 0.75rem; opacity: 0.7; background: rgba(0,0,0,0.05); padding: 5px; border-radius: 4px;">
+                    🕒 {{ announcement.get_time_of_day_display }}
+                </div>
+            </div>
+            {% empty %}
+            <p class="empty-state">No hay anuncios creados.</p>
+            {% endfor %}
+        </div>
+    </div>
+</main>
+{% endblock %}

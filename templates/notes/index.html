@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<main class="page-layout">
+    <div class="page-header">
+        <a href="{% url 'home' %}" class="back-link">← Volver</a>
+        <h1>Notas</h1>
+    </div>
+
+    <div class="widget notes-widget full-page-widget">
+        <div class="widget-header">
+            <h3>Nuestras Notas</h3>
+            <button onclick="toggleNoteForm()" class="btn-sm">+ Nueva</button>
+        </div>
+        <div id="note-form" class="hidden-form" style="display:none;">
+            <form action="{% url 'create_note' %}" method="post">
+                {% csrf_token %}
+                <textarea name="content" placeholder="Escribe algo..." required></textarea>
+                <button type="submit" class="btn-sm">Guardar</button>
+            </form>
+        </div>
+        <div class="notes-list">
+            {% for note in notes %}
+            <div class="note-card" style="--rot: {% cycle '-3deg' '4deg' '-2deg' '5deg' %};">
+                <p>{{ note.content }}</p>
+                <div class="note-footer">
+                    <div class="note-meta">
+                        {{ note.created_at|date:"d/m/Y" }}<br>
+                        {{ note.user.username }}
+                    </div>
+                    <form action="{% url 'manage_note' note.id %}" method="post" style="display:inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="delete" value="true">
+                        <button type="submit" class="delete-btn-text">×</button>
+                    </form>
+                </div>
+            </div>
+            {% empty %}
+            <p class="empty-state">Sin notas.</p>
+            {% endfor %}
+        </div>
+    </div>
+</main>
+{% endblock %}

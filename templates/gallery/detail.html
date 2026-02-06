@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<main class="page-layout">
+    <div class="page-header">
+        <a href="{% url 'gallery_index' %}" class="back-link">← Volver</a>
+    </div>
+
+    <div class="photo-detail-container">
+        <div class="photo-large">
+            <img src="{{ photo.image.url }}" alt="Photo">
+        </div>
+
+        <div class="photo-info-panel">
+            <h2>Descripción</h2>
+            <form method="post" class="desc-form">
+                {% csrf_token %}
+                <textarea name="description"
+                    placeholder="Escribe algo sobre este recuerdo...">{{ photo.description }}</textarea>
+                <button type="submit" class="btn-sm">Guardar Descripción</button>
+            </form>
+
+            <div class="photo-meta">
+                <p>Subida por <strong>{{ photo.uploader.username }}</strong> el {{ photo.created_at|date:"d M Y" }}</p>
+                <form method="post" onsubmit="return confirm('¿Estás seguro de borrar esta foto?');">
+                    {% csrf_token %}
+                    <input type="hidden" name="delete" value="true">
+                    <button type="submit" class="delete-link">Borrar Foto</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</main>
+
+<style>
+    .photo-detail-container {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 40px;
+        background: white;
+        padding: 40px;
+        border-radius: 10px;
+        /* Minimal border radius for 'photo' feel */
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        align-items: start;
+        /* Don't stretch */
+    }
+
+    .photo-large img {
+        width: 100%;
+        height: auto;
+        display: block;
+        border-radius: 4px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    }
+
+    .desc-form {
+        margin-bottom: 30px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .desc-form textarea {
+        min-height: 150px;
+        font-family: var(--font-hand);
+        font-size: 1.2rem;
+        padding: 15px;
+        background: #fdfdfd;
+        border: 1px dashed #ccc;
+    }
+
+    .photo-meta {
+        margin-top: auto;
+        border-top: 1px solid #eee;
+        padding-top: 20px;
+        font-size: 0.9rem;
+        color: #777;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .delete-link {
+        border: none;
+        background: none;
+        color: #ff6b6b;
+        cursor: pointer;
+        text-align: left;
+        padding: 0;
+        font-size: 0.9rem;
+        text-decoration: underline;
+    }
+
+    @media (max-width: 800px) {
+        .photo-detail-container {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}

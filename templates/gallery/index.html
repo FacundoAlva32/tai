@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<main class="page-layout">
+    <div class="page-header">
+        <a href="{% url 'home' %}" class="back-link">← Volver</a>
+        <h1>Galería</h1>
+    </div>
+
+    <div class="widget gallery-widget full-page-widget">
+        <div class="widget-header">
+            <h3>Fotos</h3>
+            <form action="{% url 'upload_photo' %}" method="post" enctype="multipart/form-data" class="upload-form">
+                {% csrf_token %}
+                <label for="file-upload" class="btn-sm">+ Subir Foto</label>
+                <input id="file-upload" type="file" name="image" onchange="this.form.submit()" style="display:none;">
+            </form>
+        </div>
+        <div class="photo-grid">
+            {% for photo in photos %}
+            <a href="{% url 'photo_detail' photo.id %}" class="photo-item"
+                style="--rot: {% cycle '-2deg' '3deg' '-1deg' '2deg' %};">
+                <img src="{{ photo.image.url }}" alt="Photo">
+            </a>
+            {% empty %}
+            <p class="empty-state">Sin fotos aún.</p>
+            {% endfor %}
+        </div>
+    </div>
+</main>
+{% endblock %}
