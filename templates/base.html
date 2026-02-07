@@ -13,11 +13,16 @@
     <link rel="stylesheet" href="{% static 'style.css' %}?v=6">
 </head>
 
-<body class="light-mode" data-user="{{ user.username }}">
+<body class="light-mode" data-user="{{ user.username }}" data-other-mood="{{ latest_other_mood.mood|default:'calm' }}">
+    <div class="ambient-background">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
     <div class="app-container">
         {% block content %}{% endblock %}
     </div>
-    <script src="{% static 'main.js' %}"></script>
+    <script src="{% static 'main.js' %}?v={{ now|date:'U' }}"></script>
 </body>
 
 </html>

@@ -20,21 +20,15 @@
     --font-hand: 'Indie Flower',
         cursive;
     --grid-split: 60% 40%;
+
+    /* Ambient Background Variables */
+    --bg-gradient-1: #ff9a9e;
+    --bg-gradient-2: #fecfef;
+    --blob-color-1: rgba(255, 154, 158, 0.6);
+    --blob-color-2: rgba(254, 207, 239, 0.6);
+    --blob-color-3: rgba(161, 196, 253, 0.6);
 }
 
-@keyframes oceanic {
-    0% {
-        background-position: 0% 50%;
-    }
-
-    50% {
-        background-position: 100% 50%;
-    }
-
-    100% {
-        background-position: 0% 50%;
-    }
-}
 
 
 * {
@@ -44,26 +38,12 @@
 }
 
 body {
+    /* Ambient Background - Clean Slate */
     font-family: var(--font-main);
     background-color: var(--bg-color);
-    color: var(--text-color);
-    transition: color 0.3s;
-    min-height: 100vh;
-    overflow-y: auto !important;
-    /* Force scroll */
-    overflow-x: hidden;
-
-    /* Animated Gradient Background */
-    background:
-        radial-gradient(rgba(255, 255, 255, 0.15) 2px, transparent 2px),
-        /* Polka Dots */
-        linear-gradient(-45deg, #96a977, #81c784, #007F7A, #26a69a);
-    /* Gradient */
-    background-size: 30px 30px, 400% 400%;
-    /* Dots size, Gradient size */
-    animation: oceanic 15s ease infinite;
     position: relative;
     color: var(--text-color);
+    overflow-x: hidden;
 }
 
 /* Headings specifically on the colored background need to stand out or be dark if card is light */
@@ -87,33 +67,56 @@ body {
     animation: fadeIn 0.8s ease;
 }
 
-/* Floating Blobs (Cute/Tender effect) */
-body::before,
-body::after {
-    content: '';
-    position: absolute;
-    width: 60vw;
-    height: 60vw;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+/* Ambient Background Container */
+.ambient-background {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
     z-index: -1;
-    animation: floatBlob 20s infinite ease-in-out;
+    overflow: hidden;
+    background: linear-gradient(135deg, var(--bg-gradient-1), var(--bg-gradient-2));
+    transition: background 2s ease;
 }
 
-body::before {
-    top: -20%;
-    left: -20%;
+.blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.8;
+    animation: floatAmbient 20s infinite ease-in-out;
+    transition: background 2s ease, transform 2s ease;
+}
+
+.blob-1 {
+    top: -10%;
+    left: -10%;
+    width: 50vw;
+    height: 50vw;
+    background: var(--blob-color-1);
     animation-delay: 0s;
 }
 
-body::after {
-    bottom: -20%;
-    right: -20%;
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, transparent 70%);
+.blob-2 {
+    bottom: -10%;
+    right: -10%;
+    width: 60vw;
+    height: 60vw;
+    background: var(--blob-color-2);
+    animation-delay: -5s;
+}
+
+.blob-3 {
+    top: 40%;
+    left: 40%;
+    width: 40vw;
+    height: 40vw;
+    background: var(--blob-color-3);
     animation-delay: -10s;
 }
 
-@keyframes floatBlob {
+@keyframes floatAmbient {
 
     0%,
     100% {
@@ -121,7 +124,7 @@ body::after {
     }
 
     33% {
-        transform: translate(30px, 50px) scale(1.1);
+        transform: translate(30px, -50px) scale(1.1);
     }
 
     66% {
@@ -205,10 +208,9 @@ textarea:focus {
     display: grid;
     grid-template-columns: var(--grid-split);
     /* 60/40 Split */
-    height: 100vh;
-    /* Dashboard needs fixed height for layout */
-    overflow: hidden;
-    /* Dashboard specifically does not scroll whole page */
+    min-height: 100vh;
+    /* Allow scrolling */
+    overflow: visible;
 }
 
 /* Left Column: Hero */
@@ -797,7 +799,329 @@ body.dark-mode .chat-input-area input::placeholder {
     transform: translateX(-3px);
 }
 
+/* Mood Slider */
+.mood-slider-container {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 20px;
+    border-radius: 40px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    backdrop-filter: blur(10px);
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.mood-current-label {
+    display: block;
+    font-size: 1.5rem;
+    color: #fff;
+    margin-bottom: 15px;
+    font-weight: 600;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    min-height: 2rem;
+}
+
+input[type=range] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    background: transparent;
+}
+
+input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    height: 48px;
+    width: 48px;
+    border-radius: 50%;
+    background: var(--thumb-bg, rgba(255, 255, 255, 0.2));
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    cursor: grab;
+    border: none;
+    box-shadow: none;
+    transition: transform 0.1s;
+    margin-top: -22px;
+    /* Align center (half height - half track) */
+}
+
+input[type=range]::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+}
+
+input[type=range]::-webkit-slider-thumb:active {
+    cursor: grabbing;
+    transform: scale(1.1);
+}
+
+input[type=range]::-moz-range-thumb {
+    height: 48px;
+    width: 48px;
+    border: none;
+    border-radius: 50%;
+    background: var(--thumb-bg, rgba(255, 255, 255, 0.2));
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    cursor: grab;
+    box-shadow: none;
+    transition: transform 0.1s;
+}
+
+input[type=range]::-moz-range-thumb:active {
+    cursor: grabbing;
+    transform: scale(1.1);
+}
+
+input[type=range]:focus {
+    outline: none;
+}
+
+input[type=range]::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 4px;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.4);
+    border-radius: 2px;
+}
+
+
+.btn-sentir {
+    background: #fff;
+    color: var(--text-color);
+    border: none;
+    padding: 10px 24px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 1rem;
+    margin-top: 15px;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btn-sentir:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* Mood Moods Display */
+.mood-selector {
+    display: flex;
+    justify-content: space-around;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.mood-btn {
+    background: white;
+    border: 2px solid transparent;
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    font-size: 2rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+.mood-btn:hover {
+    transform: scale(1.2);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+}
+
+.mood-btn.active {
+    border-color: var(--accent-1);
+    background: var(--accent-3);
+}
+
+.timeline-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    max-height: 500px;
+    overflow-y: auto;
+    padding-right: 10px;
+}
+
+/* Vertical Timeline Feed */
+.mood-feed-item {
+    background: rgba(255, 255, 255, 0.25);
+    border-radius: 24px;
+    padding: 20px;
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    animation: slideUp 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+    position: relative;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+    transition: transform 0.3s ease;
+}
+
+.mood-feed-item:hover {
+    transform: translateY(-5px);
+    background: rgba(255, 255, 255, 0.35);
+}
+
+.mood-emoji-large {
+    font-size: 3.5rem;
+    flex-shrink: 0;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
+    animation: pulseEmoji 3s infinite ease-in-out;
+}
+
+@keyframes pulseEmoji {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.1);
+    }
+}
+
+.mood-details {
+    flex-grow: 1;
+}
+
+.mood-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    opacity: 0.6;
+    margin-bottom: 4px;
+}
+
+.mood-note {
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Floating Emojis Animation */
+.floating-emojis {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: -1;
+    overflow: hidden;
+}
+
+.float-emoji {
+    position: absolute;
+    bottom: -150px;
+    font-size: 4.5rem;
+    /* Massive emojis */
+    opacity: 0.2;
+    filter: blur(1px);
+    animation: floatAround linear infinite;
+    user-select: none;
+}
+
+.emoji-1 {
+    left: 10%;
+    animation-duration: 20s;
+    --tx: -50px;
+}
+
+.emoji-2 {
+    left: 25%;
+    animation-duration: 25s;
+    --tx: 40px;
+    animation-delay: -5s;
+}
+
+.emoji-3 {
+    left: 40%;
+    animation-duration: 18s;
+    --tx: -30px;
+    animation-delay: -2s;
+}
+
+.emoji-4 {
+    left: 55%;
+    animation-duration: 22s;
+    --tx: 60px;
+    animation-delay: -10s;
+}
+
+.emoji-5 {
+    left: 70%;
+    animation-duration: 28s;
+    --tx: -40px;
+    animation-delay: -15s;
+}
+
+.emoji-6 {
+    left: 85%;
+    animation-duration: 21s;
+    --tx: 20px;
+    animation-delay: -7s;
+}
+
+.emoji-7 {
+    left: 5%;
+    animation-duration: 24s;
+    --tx: 50px;
+    animation-delay: -12s;
+}
+
+.emoji-8 {
+    left: 95%;
+    animation-duration: 19s;
+    --tx: -20px;
+    animation-delay: -3s;
+}
+
+@keyframes floatAround {
+    0% {
+        transform: translateY(0) rotate(0deg);
+    }
+
+    100% {
+        transform: translateY(-110vh) translateX(var(--tx)) rotate(360deg);
+    }
+}
+
+/* Custom Scrollbar for timeline */
+.timeline-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.timeline-container::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 10px;
+}
+
+.timeline-container::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+}
+
 /* Responsive */
+
 @media (max-width: 900px) {
     body {
         overflow-y: auto;

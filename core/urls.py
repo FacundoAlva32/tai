@@ -8,4 +8,5 @@ urlpatterns = [
     path('announcements/', views.manage_announcements, name='manage_announcements'),
     path('announcements/add/', views.add_announcement, name='add_announcement'),
     path('announcements/delete/<int:announcement_id>/', views.delete_announcement, name='delete_announcement'),
+    path('mood/add/', views.create_mood, name='create_mood'),
 ]

@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 
 class DailyPhrase(models.Model):
     text = models.CharField(max_length=255)
@@ -24,3 +25,49 @@ class Announcement(models.Model):
 
     def __str__(self):
         return self.title
+
+class Mood(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='mood')
+    text = models.CharField(max_length=120)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.username}: {self.text}"
+
+class MoodEntry(models.Model):
+    MOOD_CHOICES = [
+        ('enojado', 'Enojado'),
+        ('triste', 'Triste'),
+        ('cansado', 'Cansado'),
+        ('calmado', 'Calmado'),
+        ('feliz', 'Feliz'),
+        ('amoroso', 'Amoroso'),
+        # Keep English for backward compatibility if needed, or primarily switch to Spanish
+        ('angry', 'Angry'),
+        ('sad', 'Sad'),
+        ('tired', 'Tired'),
+        ('calm', 'Calm'),
+        ('happy', 'Happy'),
+        ('love', 'Love'),
+    ]
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='mood_entries')
+    mood = models.CharField(max_length=20, choices=MOOD_CHOICES)
+    note = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def get_emoji(self):
+        emojis = {
+            'happy': '😄', 'feliz': '😄',
+            'calm': '😊', 'calmado': '😊',
+            'tired': '😴', 'cansado': '😴',
+            'sad': '😢', 'triste': '😢',
+            'angry': '😡', 'enojado': '😡',
+            'love': '❤️', 'amoroso': '❤️',
+        }
+        return emojis.get(self.mood, '😐')
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user.username} - {self.mood} at {self.created_at}"

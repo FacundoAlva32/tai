@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.decorators import login_required, user_passes_test
-from .models import DailyPhrase, Announcement
+from .models import DailyPhrase, Announcement, Mood, MoodEntry
 import random
 from django.utils import timezone
 
@@ -53,12 +53,56 @@ def home(request):
     )
     
     announcement = random.choice(announcements) if announcements else None
+
+    # Mood Logic
+    latest_my_mood = MoodEntry.objects.filter(user=request.user).order_by('-created_at').first()
+    latest_other_mood = MoodEntry.objects.exclude(user=request.user).order_by('-created_at').first()
+    
+    # Background Gradient Logic based on latest_my_mood
+    bg_gradient = "linear-gradient(-45deg, #96a977, #81c784, #007F7A, #26a69a)" # Default
+    if latest_my_mood:
+        gradients = {
+            'happy': "linear-gradient(135deg, #fff9c4 0%, #ffeb3b 50%, #fbc02d 100%)", # Gold/Yellow
+            'feliz': "linear-gradient(135deg, #fff9c4 0%, #ffeb3b 50%, #fbc02d 100%)", # Gold/Yellow
+            
+            'calm': "linear-gradient(135deg, #e3f2fd 0%, #bbdefb 50%, #90caf9 100%)", # Sky Blue
+            'calmado': "linear-gradient(135deg, #e3f2fd 0%, #bbdefb 50%, #90caf9 100%)", # Sky Blue
+            
+            'tired': "linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 50%, #bdbdbd 100%)", # Soft Gray
+            'cansado': "linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 50%, #bdbdbd 100%)", # Soft Gray
+            
+            'sad': "linear-gradient(135deg, #c5cae9 0%, #9fa8da 50%, #7986cb 100%)", # Indigo/Lavenderish
+            'triste': "linear-gradient(135deg, #c5cae9 0%, #9fa8da 50%, #7986cb 100%)", # Indigo/Lavenderish
+            
+            'angry': "linear-gradient(135deg, #ffcdd2 0%, #ef9a9a 50%, #e57373 100%)", # Soft Red
+            'enojado': "linear-gradient(135deg, #ffcdd2 0%, #ef9a9a 50%, #e57373 100%)", # Soft Red
+            
+            'love': "linear-gradient(135deg, #f8bbd0 0%, #f48fb1 50%, #f06292 100%)", # Rose/Pink
+            'amoroso': "linear-gradient(135deg, #f8bbd0 0%, #f48fb1 50%, #f06292 100%)", # Rose/Pink
+        }
+        bg_gradient = gradients.get(latest_my_mood.mood, bg_gradient)
     
     context = {
         'hero_phrase': hero_phrase,
         'announcement': announcement,
+        'latest_my_mood': latest_my_mood,
+        'latest_other_mood': latest_other_mood,
+        'bg_gradient': bg_gradient,
     }
     return render(request, 'dashboard.html', context)
+
+@login_required(login_url='login')
+def create_mood(request):
+    if request.method == 'POST':
+        mood = request.POST.get('mood')
+        note = request.POST.get('note', '').strip()
+        if mood in [choice[0] for choice in MoodEntry.MOOD_CHOICES]:
+            MoodEntry.objects.create(
+                user=request.user,
+                mood=mood,
+                note=note[:255]
+            )
+    return redirect('home')
 
 @user_passes_test(lambda u: u.is_staff)
 def manage_announcements(request):

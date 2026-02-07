@@ -1,77 +1,128 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<main class="dashboard-layout">
-    <!-- Left Column: Hero -->
-    <section class="hero-section">
-        <div class="hero-content">
-            <section class="hero">
-                {% if announcement %}
-                <h1 class="hero-announcement-title">{{ announcement.title }}</h1>
-                <p class="hero-announcement-text">{{ announcement.content }}</p>
-                {% elif hero_phrase %}
-                <h1>“{{ hero_phrase.text }}”</h1>
-                {% if hero_phrase.author %}
-                <p class="author">- {{ hero_phrase.author }}</p>
-                {% endif %}
-                {% else %}
-                <h1>Holi</h1>
-                {% endif %}
 
-                {% if user.is_staff %}
-                <div style="position: absolute; top: 20px; right: 20px; opacity: 0.5;">
-                    <a href="{% url 'manage_announcements' %}"
-                        style="text-decoration:none; color: white; font-size: 0.8rem; background: rgba(0,0,0,0.2); padding: 5px 10px; border-radius: 20px;">⚙️</a>
+<div class="dashboard-wrapper">
+    <main class="dashboard-layout">
+        <!-- Left Column: Hero -->
+        <section class="hero-section">
+            <div class="hero-content">
+                <section class="hero">
+                    {% if announcement %}
+                    <h1 class="hero-announcement-title">{{ announcement.title }}</h1>
+                    <p class="hero-announcement-text">{{ announcement.content }}</p>
+                    {% elif hero_phrase %}
+                    <h1>“{{ hero_phrase.text }}”</h1>
+                    {% if hero_phrase.author %}
+                    <p class="author">- {{ hero_phrase.author }}</p>
+                    {% endif %}
+                    {% else %}
+                    <h1>Holi</h1>
+                    {% endif %}
+
+                    {% if user.is_staff %}
+                    <div style="position: absolute; top: 20px; right: 20px; opacity: 0.5;">
+                        <a href="{% url 'manage_announcements' %}"
+                            style="text-decoration:none; color: white; font-size: 0.8rem; background: rgba(0,0,0,0.2); padding: 5px 10px; border-radius: 20px;">⚙️</a>
+                    </div>
+                    {% endif %}
+                </section>
+                <div class="hero-footer">
+                    <a href="{% url 'logout' %}" class="btn-text">Salir</a>
+                    <!-- Theme toggle removed -->
                 </div>
-                {% endif %}
-            </section>
-            <div class="hero-footer">
-                <a href="{% url 'logout' %}" class="btn-text">Salir</a>
-                <!-- Theme toggle removed -->
             </div>
-        </div>
-    </section>
+        </section>
 
-    <!-- Right Column: Content Grid -->
-    <section class="content-grid">
+        <!-- Right Column: Content Grid -->
+        <section class="content-grid">
 
-        <!-- Navigation Cards -->
-        <a href="{% url 'gallery_index' %}" class="widget nav-card">
-            <h3>Galería</h3>
-            <p>Fotos y Recuerdos</p>
-        </a>
+            <!-- Premium Emotional Section -->
+            <div class="mood-section widget"
+                style="grid-column: span 1; padding: 40px; border: none; background: rgba(255, 255, 255, 0.15); backdrop-filter: blur(20px);">
+                <h2
+                    style="margin-top: 0; margin-bottom: 30px; font-family: var(--font-hand); font-size: 3rem; color: #fff; text-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                    Me siento...</h2>
 
-        <a href="{% url 'watchlist_index' %}" class="widget nav-card">
-            <h3>Cosas para ver</h3>
-            <p>Películas y Series</p>
-        </a>
+                <!-- Interactive Mood Picker (Slider) -->
+                <form id="mood-form" method="POST" action="{% url 'create_mood' %}" style="margin-bottom: 40px;">
+                    {% csrf_token %}
+                    <div class="mood-slider-container">
+                        <span id="mood-label" class="mood-current-label">Calm</span>
+                        <input type="range" min="0" max="5" step="1" id="mood-range" value="3"
+                            data-current-mood="{{ latest_my_mood.mood }}">
+                        <button type="submit" class="btn-sentir">Así</button>
+                    </div>
+                    <input type="hidden" name="mood" id="id_mood" value="calm">
+                </form>
 
-        <a href="{% url 'notes_index' %}" class="widget nav-card">
-            <h3>Notas</h3>
-            <p>Ideas y Listas</p>
-        </a>
+                <script>
+                    function submitMood(val) {
+                        document.getElementById('id_mood').value = val;
+                        document.getElementById('mood-form').submit();
+                    }
+                </script>
 
-        <!-- Chat Widget (Kept on Dashboard) -->
-        <div class="widget chat-widget">
-            <div class="widget-header">
-                <h3>Chat</h3>
+                <!-- Simplified Mood Display -->
+                <div style="display: flex; justify-content: center; align-items: center; gap: 40px; margin-top: 20px;">
+                    <!-- Partner Status -->
+                    <div
+                        style="text-align: center; background: rgba(255,255,255,0.25); padding: 30px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.4); backdrop-filter: blur(10px); min-width: 200px;">
+                        {% if user.username|lower == 'pacu' %}Taii{% else %}Pacu{% endif %} :
+                        </h3>
+                        {% if latest_other_mood %}
+                        <div
+                            style="font-size: 6rem; line-height: 1; margin: 10px 0; animation: float 3s ease-in-out infinite;">
+                            {{ latest_other_mood.get_emoji }}
+                        </div>
+                        <strong style="font-size: 1.5rem; color: #fff; display: block; margin-top: 10px;">
+                            {{ latest_other_mood.get_mood_display }}
+                        </strong>
+                        {% else %}
+                        <p style="color: #fff; opacity: 0.7; font-style: italic;">Sin novedades aún...</p>
+                        {% endif %}
+                    </div>
+                </div>
             </div>
-            <div class="chat-messages" id="chat-messages">
-                <!-- Messages loaded via JS -->
-            </div>
-            <div class="chat-input-area">
-                <label for="chat-file" class="chat-btn" title="Adjuntar foto">///</label>
-                <input type="file" id="chat-file" accept="image/*" style="display:none;" onchange="previewImage()">
-                <input type="text" id="chat-input" placeholder="Escribe un mensaje...">
-                <button onclick="sendMessage()" class="chat-btn send-btn">➤</button>
-            </div>
-            <div id="image-preview-container" style="display:none; padding: 0 10px 10px;">
-                <img id="image-preview" class="chat-image-preview">
-                <button onclick="clearImage()"
-                    style="background:none; border:none; color:red; cursor:pointer;">×</button>
-            </div>
-        </div>
 
-    </section>
-</main>
+            <!-- Navigation Cards -->
+            <a href="{% url 'gallery_index' %}" class="widget nav-card">
+                <h3>Galería</h3>
+                <p>Fotos y Recuerdos</p>
+            </a>
+
+            <a href="{% url 'watchlist_index' %}" class="widget nav-card">
+                <h3>Cosas para ver</h3>
+                <p>Películas y Series</p>
+            </a>
+
+            <a href="{% url 'notes_index' %}" class="widget nav-card">
+                <h3>Notas</h3>
+                <p>Ideas y Listas</p>
+            </a>
+
+            <!-- Chat Widget (Kept on Dashboard) -->
+            <div class="widget chat-widget">
+                <div class="widget-header">
+                    <h3>Chat</h3>
+                </div>
+                <div class="chat-messages" id="chat-messages">
+                    <!-- Messages loaded via JS -->
+                </div>
+                <div class="chat-input-area">
+                    <label for="chat-file" class="chat-btn" title="Adjuntar foto">///</label>
+                    <input type="file" id="chat-file" accept="image/*" style="display:none;" onchange="previewImage()">
+                    <input type="text" id="chat-input" placeholder="Escribe un mensaje...">
+                    <button onclick="sendMessage()" class="chat-btn send-btn">➤</button>
+                </div>
+                <div id="image-preview-container" style="display:none; padding: 0 10px 10px;">
+                    <img id="image-preview" class="chat-image-preview">
+                    <button onclick="clearImage()"
+                        style="background:none; border:none; color:red; cursor:pointer;">×</button>
+                </div>
+            </div>
+
+        </section>
+    </main>
+</div>
 {% endblock %}
