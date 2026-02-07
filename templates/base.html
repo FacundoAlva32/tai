@@ -22,7 +22,7 @@
     <div class="app-container">
         {% block content %}{% endblock %}
     </div>
-    <script src="{% static 'main.js' %}?v={{ now|date:'U' }}"></script>
+    <script src="{% static 'main.js' %}?v={% now 'U' %}"></script>
 </body>
 
 </html>

@@ -10,10 +10,12 @@ def get_messages(request):
     messages = Message.objects.select_related('user').order_by('-timestamp')[:50]
     data = [
         {
+            'id': msg.id,
             'user': msg.user.username,
+            'is_user': msg.user == request.user,
             'content': msg.content,
-            'image': msg.image.url if msg.image else None,
-            'timestamp': msg.timestamp.strftime('%H:%M')
+            'image_url': msg.image.url if msg.image else None,
+            'timestamp': msg.timestamp.isoformat()
         } for msg in reversed(messages)
     ]
     return JsonResponse({'messages': data})

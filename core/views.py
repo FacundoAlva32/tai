@@ -67,6 +67,7 @@ def home(request):
             
             'calm': "linear-gradient(135deg, #e3f2fd 0%, #bbdefb 50%, #90caf9 100%)", # Sky Blue
             'calmado': "linear-gradient(135deg, #e3f2fd 0%, #bbdefb 50%, #90caf9 100%)", # Sky Blue
+            'tranqui': "linear-gradient(135deg, #e3f2fd 0%, #bbdefb 50%, #90caf9 100%)", # Sky Blue
             
             'tired': "linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 50%, #bdbdbd 100%)", # Soft Gray
             'cansado': "linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 50%, #bdbdbd 100%)", # Soft Gray

@@ -1,164 +1,244 @@
-// Main JS
-
 // ==========================================
-// 1. Global Utilities (Modals & Forms)
+// 1. Initial Setup & Chat Logic
 // ==========================================
 
-window.openModal = function (url) {
-    const modal = document.getElementById('image-modal');
-    const img = document.getElementById('modal-img');
-    if (modal && img) {
-        modal.style.display = 'block';
-        img.src = url;
-    }
-}
-
-window.closeModal = function () {
-    const modal = document.getElementById('image-modal');
-    if (modal) modal.style.display = 'none';
-}
-
-window.toggleWatchForm = function () {
-    const f = document.getElementById('watch-form');
-    if (f) f.style.display = f.style.display === 'none' ? 'block' : 'none';
-}
-
-window.toggleNoteForm = function () {
-    const f = document.getElementById('note-form');
-    if (f) f.style.display = f.style.display === 'none' ? 'block' : 'none';
-}
-
-// ==========================================
-// 2. Chat Logic
-// ==========================================
-
-const chatInput = document.getElementById('chat-input');
-const chatMessages = document.getElementById('chat-messages');
-const chatFile = document.getElementById('chat-file');
-
-if (chatInput && chatMessages && chatFile) {
-
-    async function fetchMessages() {
-        try {
-            const response = await fetch('/chat/get/');
-            const data = await response.json();
-
-            // Simple check if we should scroll
-            const isScrolledToBottom = chatMessages.scrollHeight - chatMessages.clientHeight <= chatMessages.scrollTop + 100;
-
-            chatMessages.innerHTML = '';
-            data.messages.forEach(msg => {
-                const currentUser = document.body.dataset.user;
-                const isMine = msg.user === currentUser;
-                const msgDiv = document.createElement('div');
-                msgDiv.classList.add('chat-bubble', isMine ? 'bubble-mine' : 'bubble-theirs');
-
-                let contentHtml = '';
-                if (msg.image) {
-                    contentHtml += `<img src="${msg.image}" style="max-width:200px; border-radius:8px; display:block; margin-bottom:5px;">`;
-                }
-                if (msg.content) {
-                    contentHtml += `<span>${msg.content}</span>`;
-                }
-
-                msgDiv.innerHTML = `<strong style="display:block; font-size:0.8em; margin-bottom:2px;">${msg.user}</strong>
-                                     ${contentHtml} 
-                                     <span style="font-size:0.7em; opacity:0.7; float:right; margin-top:5px; margin-left:10px;">${msg.timestamp}</span>`;
-                chatMessages.appendChild(msgDiv);
-            });
-
-            if (isScrolledToBottom) {
-                chatMessages.scrollTop = chatMessages.scrollHeight;
+// Helper to get CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
             }
-        } catch (e) {
-            console.error("Error fetching messages:", e);
         }
     }
+    return cookieValue;
+}
 
-    async function sendMessage() {
-        const content = chatInput.value;
-        const file = chatFile.files[0];
+const csrftoken = getCookie('csrftoken');
 
-        if (!content && !file) return;
-
-        const formData = new FormData();
-        formData.append('content', content);
-        if (file) {
-            formData.append('image', file);
-        }
-
-        try {
-            const response = await fetch('/chat/send/', {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
-                body: formData
-            });
-            const data = await response.json();
-            if (data.status === 'ok') {
-                chatInput.value = '';
-                clearImage();
-                fetchMessages();
-                setTimeout(() => chatMessages.scrollTop = chatMessages.scrollHeight, 100);
+document.addEventListener("DOMContentLoaded", () => {
+    // Reveal animations
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
             }
-        } catch (e) {
-            console.error("Error sending message:", e);
-        }
+        });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.widget').forEach(widget => {
+        observer.observe(widget);
+    });
+
+    // Chat Logic
+    initChat();
+});
+
+function initChat() {
+    const chatInput = document.getElementById('chat-input');
+    const chatMessages = document.getElementById('chat-messages');
+    const fileInput = document.getElementById('chat-file');
+    const imagePreviewContainer = document.getElementById('image-preview-container');
+    const imagePreview = document.getElementById('image-preview');
+    const sendBtn = document.querySelector('.send-btn');
+
+    if (!chatInput || !chatMessages) {
+        console.error("Chat elements not found!");
+        return;
     }
 
-    function previewImage() {
-        const file = chatFile.files[0];
-        if (file) {
+    window.previewImage = function () {
+        if (fileInput && fileInput.files && fileInput.files[0]) {
+            const file = fileInput.files[0];
             const reader = new FileReader();
             reader.onload = function (e) {
-                const preview = document.getElementById('image-preview');
-                if (preview) {
-                    preview.src = e.target.result;
-                    const container = document.getElementById('image-preview-container');
-                    if (container) container.style.display = 'block';
+                if (imagePreview) {
+                    imagePreview.src = e.target.result;
+                    imagePreviewContainer.style.display = 'block';
                 }
             }
             reader.readAsDataURL(file);
         }
+    };
+
+    window.clearImage = function () {
+        if (fileInput) fileInput.value = '';
+        if (imagePreview) imagePreview.src = '';
+        if (imagePreviewContainer) imagePreviewContainer.style.display = 'none';
+    };
+
+
+    let lastDateString = null;
+    let seenMessageIds = new Set();
+
+    function scrollToBottom() {
+        chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
-    function clearImage() {
-        chatFile.value = '';
-        const preview = document.getElementById('image-preview');
-        if (preview) preview.src = '';
-        const container = document.getElementById('image-preview-container');
-        if (container) container.style.display = 'none';
+    // Check if user is near bottom
+    function isUserNearBottom() {
+        return chatMessages.scrollTop + chatMessages.clientHeight >= chatMessages.scrollHeight - 100;
     }
 
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
+    function formatTime(isoString) {
+        if (!isoString) return '';
+        const date = new Date(isoString);
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function formatDate(isoString) {
+        if (!isoString) return '';
+        const date = new Date(isoString);
+        const now = new Date();
+        const yesterday = new Date(now);
+        yesterday.setDate(yesterday.getDate() - 1);
+
+        if (date.toDateString() === now.toDateString()) {
+            return 'Hoy';
+        } else if (date.toDateString() === yesterday.toDateString()) {
+            return 'Ayer';
+        } else {
+            return date.toLocaleDateString();
         }
-        return cookieValue;
     }
 
-    // Expose to window
+    function addDateHeader(isoString) {
+        const dateStr = formatDate(isoString);
+        if (dateStr !== lastDateString) {
+            const div = document.createElement('div');
+            div.className = 'chat-date-header';
+            div.innerText = dateStr;
+            chatMessages.appendChild(div);
+            lastDateString = dateStr;
+        }
+    }
+
+    function addMessage(msg, isUser, isOptimistic = false) {
+        // Validation: If we already have this ID, skip it (unless it's optimistic update)
+        if (msg.id && seenMessageIds.has(msg.id)) return;
+
+        // If it's a real message, track it
+        if (msg.id) seenMessageIds.add(msg.id);
+
+        // Check for date header if timestamp exists
+        if (msg.timestamp) {
+            addDateHeader(msg.timestamp);
+        }
+
+        const div = document.createElement('div');
+        div.className = `message ${isUser ? 'user' : 'bot'} ${isOptimistic ? 'optimistic' : ''}`;
+
+        let content = '';
+        if (msg.image_url) {
+            content += `<img src="${msg.image_url}" class="chat-image" onclick="window.open(this.src, '_blank')">`;
+        }
+        if (msg.content || msg.text) {
+            content += `<p>${msg.content || msg.text}</p>`;
+        }
+
+        // Timestamp
+        const timeStr = msg.timestamp ? formatTime(msg.timestamp) : formatTime(new Date().toISOString());
+        content += `<span class="message-time">${timeStr}</span>`;
+
+        div.innerHTML = content;
+        chatMessages.appendChild(div);
+    }
+
+    async function fetchMessages() {
+        try {
+            const res = await fetch('/chat/get/');
+            const data = await res.json();
+
+            // Filter only NEW messages
+            const newMessages = data.messages.filter(msg => !seenMessageIds.has(msg.id));
+
+            if (newMessages.length === 0) return; // Nothing to do, zero flicker.
+
+            const wasNearBottom = isUserNearBottom();
+
+            // If we have new messages, remove optimistic ones to prevent duplication
+            // (Only if we assume the new messages cover the optimistic ones)
+            if (newMessages.length > 0) {
+                document.querySelectorAll('.message.optimistic').forEach(el => el.remove());
+            }
+
+            newMessages.forEach(msg => {
+                addMessage(msg, msg.is_user);
+            });
+
+            // Scroll logic: If was near bottom OR first load (empty chat)
+            if (wasNearBottom || chatMessages.childElementCount <= newMessages.length + 5) { // broad check for "start"
+                scrollToBottom();
+            }
+
+        } catch (err) {
+            console.error("Error fetching messages:", err);
+        }
+    }
+
+    async function sendMessage() {
+        const text = chatInput.value.trim();
+        const file = fileInput ? fileInput.files[0] : null;
+
+        if (!text && !file) return;
+
+        const formData = new FormData();
+        if (text) formData.append('content', text);
+        if (file) formData.append('image', file);
+
+        // Optimistic UI
+        const nowIso = new Date().toISOString();
+        if (text || file) {
+            const tempMsg = {
+                content: text,
+                timestamp: nowIso,
+                // No ID for optimistic
+            };
+            addMessage(tempMsg, true, true); // true for isOptimistic
+            scrollToBottom();
+        }
+
+        chatInput.value = '';
+        clearImage();
+
+        try {
+            await fetch('/chat/send/', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrftoken },
+                body: formData
+            });
+            // Fetch immediately to replace optimistic with real
+            fetchMessages();
+        } catch (err) {
+            console.error("Error sending message:", err);
+        }
+    }
+
+    // Expose to window for onclick attributes
     window.sendMessage = sendMessage;
-    window.previewImage = previewImage;
-    window.clearImage = clearImage;
+
+    // Attach explicit event listeners
+    if (sendBtn) {
+        sendBtn.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevent form submission if inside a form
+            sendMessage();
+        });
+    }
 
     chatInput.addEventListener('keypress', function (e) {
-        if (e.key === 'Enter') {
+        if (e.key === 'Enter' && !e.shiftKey) { // Allow Shift+Enter for newline
+            e.preventDefault(); // Prevent default newline
             sendMessage();
         }
     });
 
-    setInterval(fetchMessages, 2000);
+    // Initial load and polling
     fetchMessages();
+    setInterval(fetchMessages, 3000); // Polling every 3s
 }
 
 // ==========================================
@@ -178,7 +258,19 @@ const moodPalettes = {
         bg1: '#4facfe', bg2: '#00f2fe',
         blob1: 'rgba(79, 172, 254, 0.8)', blob2: 'rgba(0, 242, 254, 0.8)', blob3: 'rgba(0, 198, 255, 0.6)'
     },
+    calm: { // calm
+        bg1: '#4facfe', bg2: '#00f2fe',
+        blob1: 'rgba(79, 172, 254, 0.8)', blob2: 'rgba(0, 242, 254, 0.8)', blob3: 'rgba(0, 198, 255, 0.6)'
+    },
+    tranqui: { // calm/tranqui
+        bg1: '#4facfe', bg2: '#00f2fe',
+        blob1: 'rgba(79, 172, 254, 0.8)', blob2: 'rgba(0, 242, 254, 0.8)', blob3: 'rgba(0, 198, 255, 0.6)'
+    },
     cansado: { // tired
+        bg1: '#8e9eab', bg2: '#eef2f3',
+        blob1: 'rgba(142, 158, 171, 0.8)', blob2: 'rgba(200, 210, 220, 0.8)', blob3: 'rgba(100, 110, 120, 0.5)'
+    },
+    tired: { // tired
         bg1: '#8e9eab', bg2: '#eef2f3',
         blob1: 'rgba(142, 158, 171, 0.8)', blob2: 'rgba(200, 210, 220, 0.8)', blob3: 'rgba(100, 110, 120, 0.5)'
     },
@@ -197,6 +289,7 @@ const moodPalettes = {
 };
 
 window.setMoodBackground = function (mood) {
+    if (!mood) return;
     const palette = moodPalettes[mood] || moodPalettes.feliz || moodPalettes.happy;
     const root = document.documentElement;
 
@@ -207,24 +300,10 @@ window.setMoodBackground = function (mood) {
     root.style.setProperty('--blob-color-3', palette.blob3);
 };
 
-// Helper to set thumb emoji
-function setThumbEmoji(emoji) {
-    const moodSlider = document.getElementById('mood-range');
-    if (!moodSlider) return;
+// ==========================================
+// Mood Slider "Reactions" Logic
+// ==========================================
 
-    // SVG Data URI with the emoji text centered
-    // Using simple styling/encoding to ensure compatibility
-    const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
-        <style>text { font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif; }</style>
-        <text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-size="36">${emoji}</text>
-    </svg>
-    `;
-    const encoded = encodeURIComponent(svg);
-    moodSlider.style.setProperty('--thumb-bg', `url("data:image/svg+xml;charset=UTF-8,${encoded}")`);
-}
-
-// Mood Slider Logic
 const moodSlider = document.getElementById('mood-range');
 const moodLabel = document.getElementById('mood-label');
 const moodForm = document.getElementById('mood-form');
@@ -233,48 +312,83 @@ const moodInput = document.getElementById('id_mood');
 const moodMap = {
     0: 'enojado',
     1: 'triste',
-    2: 'cansado',
-    3: 'calmado',
+    2: 'cansado',   // Corrected from 'tranqui'
+    3: 'tranqui',
     4: 'feliz',
     5: 'amoroso'
-};
-
-const moodEmojis = {
-    0: '😡',
-    1: '😢',
-    2: '😴',
-    3: '😊',
-    4: '😄',
-    5: '❤️'
 };
 
 const moodNames = {
     0: 'Enojado',
     1: 'Triste',
     2: 'Cansado',
-    3: 'Calmado',
+    3: 'Tranqui',
     4: 'Feliz',
     5: 'Amoroso'
 };
 
-// Reverse map for initialization
 const moodReverseMap = {
     'enojado': 0,
     'triste': 1,
     'cansado': 2,
-    'calmado': 3,
+    'tranqui': 3,
     'feliz': 4,
     'amoroso': 5,
     // Add english fallbacks just in case
     'angry': 0, 'sad': 1, 'tired': 2, 'calm': 3, 'happy': 4, 'love': 5
 };
 
+const moodSvgs = {
+    0: `<svg viewBox="0 0 36 36" fill="url(#grad_angry)"><defs><linearGradient id="grad_angry" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#FF5E62;stop-opacity:1" /><stop offset="100%" style="stop-color:#FF9966;stop-opacity:1" /></linearGradient></defs><circle cx="18" cy="18" r="18"/><path fill="#FFF" d="M11 23c0-2.5 7-2.5 14 0M10 14l5 2M26 14l-5 2" stroke="#FFF" stroke-width="2" stroke-linecap="round"/></svg>`, // Angry
+    1: `<svg viewBox="0 0 36 36" fill="url(#grad_sad)"><defs><linearGradient id="grad_sad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#5B86E5;stop-opacity:1" /><stop offset="100%" style="stop-color:#36D1DC;stop-opacity:1" /></linearGradient></defs><circle cx="18" cy="18" r="18"/><circle fill="#FFF" cx="12" cy="14" r="2"/><circle fill="#FFF" cx="24" cy="14" r="2"/><path fill="none" stroke="#FFF" stroke-width="2" stroke-linecap="round" d="M12 25s3-2 6-2 6 2 6 2"/><path fill="#FFF" d="M25 15c.5 2 1 4 0 5" opacity="0.5"/></svg>`, // Sad
+    2: `<svg viewBox="0 0 36 36" fill="url(#grad_tired)"><defs><linearGradient id="grad_tired" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#bdc3c7;stop-opacity:1" /><stop offset="100%" style="stop-color:#2c3e50;stop-opacity:1" /></linearGradient></defs><circle cx="18" cy="18" r="18"/><path fill="none" stroke="#FFF" stroke-width="2" d="M10 16h6M20 16h6"/><circle fill="#FFF" cx="28" cy="12" r="3" opacity="0.5"/><circle fill="#FFF" cx="32" cy="8" r="1.5" opacity="0.5"/><path fill="none" stroke="#FFF" stroke-width="2" d="M14 24s2 2 4 2 4-2 4-2"/></svg>`, // Tired
+    3: `<svg viewBox="0 0 36 36" fill="url(#grad_calm)"><defs><linearGradient id="grad_calm" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#89f7fe;stop-opacity:1" /><stop offset="100%" style="stop-color:#66a6ff;stop-opacity:1" /></linearGradient></defs><circle cx="18" cy="18" r="18"/><circle fill="#FFF" cx="12" cy="15" r="2"/><circle fill="#FFF" cx="24" cy="15" r="2"/><path fill="none" stroke="#FFF" stroke-width="2" d="M13 22s2.5 2 5 2 5-2 5-2"/></svg>`, // Calm
+    4: `<svg viewBox="0 0 36 36" fill="url(#grad_happy)"><defs><linearGradient id="grad_happy" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#F2994A;stop-opacity:1" /><stop offset="100%" style="stop-color:#F2C94C;stop-opacity:1" /></linearGradient></defs><circle cx="18" cy="18" r="18"/><path fill="none" stroke="#FFF" stroke-width="2" stroke-linecap="round" d="M12 22s2.5 3 6 3 6-3 6-3"/><circle fill="#FFF" cx="12" cy="14" r="2"/><circle fill="#FFF" cx="24" cy="14" r="2"/></svg>`, // Happy
+    5: `<svg viewBox="0 0 36 36" fill="url(#grad_love)"><defs><linearGradient id="grad_love" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#ff9a9e;stop-opacity:1" /><stop offset="100%" style="stop-color:#fecfef;stop-opacity:1" /></linearGradient></defs><circle cx="18" cy="18" r="18"/><path fill="#FFF" d="M18 25s-7-4-9-9c-2-5 3-8 6-5 1 1 3 4 3 4s2-3 3-4c3-3 8 0 6 5-2 5-9 9-9 9z"/></svg>` // Love
+};
+
 if (moodSlider) {
+    const track = document.getElementById('mood-icons-track');
+
+    // 1. Inject Icons
+    if (track) {
+        track.innerHTML = ''; // Clear
+        for (let i = 0; i <= 5; i++) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'mood-icon-wrapper';
+            wrapper.innerHTML = moodSvgs[i];
+            track.appendChild(wrapper);
+        }
+    }
+
+    const iconWrappers = document.querySelectorAll('.mood-icon-wrapper');
+
+    function updateReactions(val) {
+        iconWrappers.forEach((wrapper, index) => {
+            wrapper.classList.remove('active', 'neighbor');
+            wrapper.style.transform = '';
+            wrapper.style.opacity = '';
+            wrapper.style.filter = '';
+
+            const dist = Math.abs(val - index);
+
+            if (dist === 0) {
+                wrapper.classList.add('active');
+            } else if (dist === 1) {
+                wrapper.classList.add('neighbor');
+            } else {
+                wrapper.style.transform = 'scale(0.85)';
+                wrapper.style.opacity = '0.5';
+                wrapper.style.filter = 'grayscale(50%)';
+            }
+        });
+    }
+
     // Init logic
     const savedMood = moodSlider.dataset.currentMood;
-    let initialVal = 3; // Default
+    let initialVal = 3; // Default ('Tranqui')
 
-    // Try to match saved mood (case insensitive just in case)
+    // Try to match saved mood
     if (savedMood) {
         const key = savedMood.toLowerCase();
         if (moodReverseMap.hasOwnProperty(key)) {
@@ -282,44 +396,44 @@ if (moodSlider) {
         }
     }
 
+    // Set Slider Value
     moodSlider.value = initialVal;
 
-    const initialEmoji = moodEmojis[initialVal];
-
-    // Set initial label and thumb
-    if (moodLabel) {
-        moodLabel.innerText = `${initialEmoji} ${moodNames[initialVal]}`;
+    // Set Hidden Input Value (CRITICAL for form submission)
+    if (moodInput) {
+        moodInput.value = moodMap[initialVal];
     }
-    setThumbEmoji(initialEmoji);
+
+    // Set initial label
+    if (moodLabel) {
+        moodLabel.innerText = `${moodNames[initialVal]}`;
+    }
+
+    // Initial Animation & Background
+    updateReactions(initialVal);
+    setMoodBackground(moodMap[initialVal]);
 
     moodSlider.addEventListener('input', (e) => {
         const val = parseInt(e.target.value, 10);
         const mood = moodMap[val];
-        const emoji = moodEmojis[val];
 
         if (moodLabel) {
             moodLabel.innerText = `${moodNames[val]}`;
         }
 
-        // Update background preview immediately
+        // Update background
         setMoodBackground(mood);
 
-        // Update Thumb Emoji
-        setThumbEmoji(emoji);
+        // Update Animations
+        updateReactions(val);
 
         // Update hidden input for manual submit
         if (moodInput) {
             moodInput.value = mood;
         }
+
+        if (navigator.vibrate) {
+            try { navigator.vibrate(5); } catch (e) { }
+        }
     });
-}
-
-// ==========================================
-// 4. Initial Mood Setup
-// ==========================================
-
-// Initialize with Partner's Mood
-const otherMood = document.body.dataset.otherMood;
-if (otherMood) {
-    window.setMoodBackground(otherMood);
 }

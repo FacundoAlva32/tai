@@ -17,7 +17,7 @@
                     <p class="author">- {{ hero_phrase.author }}</p>
                     {% endif %}
                     {% else %}
-                    <h1>Holi</h1>
+                    <h1>tai</h1>
                     {% endif %}
 
                     {% if user.is_staff %}
@@ -47,10 +47,20 @@
                 <!-- Interactive Mood Picker (Slider) -->
                 <form id="mood-form" method="POST" action="{% url 'create_mood' %}" style="margin-bottom: 40px;">
                     {% csrf_token %}
-                    <div class="mood-slider-container">
+                    <div class="mood-reactions-container">
                         <span id="mood-label" class="mood-current-label">Calm</span>
-                        <input type="range" min="0" max="5" step="1" id="mood-range" value="3"
-                            data-current-mood="{{ latest_my_mood.mood }}">
+
+                        <div class="slider-wrapper">
+                            <!-- Track for Icons -->
+                            <div class="mood-icons-track" id="mood-icons-track">
+                                <!-- Icons injected via JS -->
+                            </div>
+
+                            <!-- Invisible Touch Layer -->
+                            <input type="range" min="0" max="5" step="1" id="mood-range" value="3"
+                                data-current-mood="{{ latest_my_mood.mood }}">
+                        </div>
+
                         <button type="submit" class="btn-sentir">Así</button>
                     </div>
                     <input type="hidden" name="mood" id="id_mood" value="calm">
