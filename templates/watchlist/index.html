@@ -79,7 +79,8 @@
                     </div>
                 </div>
                 <!-- Delete Button -->
-                <form action="{% url 'delete_watch_item' item.id %}" method="post" style="margin-left:auto;">
+                <form action="{% url 'delete_watch_item' item.id %}" method="post" style="margin-left:auto;"
+                    onsubmit="return confirm('¿Estás seguro de que quieres eliminar este ítem?');">
                     {% csrf_token %}
                     <button type="submit" class="delete-icon">×</button>
                 </form>

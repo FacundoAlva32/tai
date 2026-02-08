@@ -22,14 +22,16 @@
         </div>
         <div class="notes-list">
             {% for note in notes %}
-            <div class="note-card" style="--rot: {% cycle '-3deg' '4deg' '-2deg' '5deg' %};">
+            <div class="note-card" style="--rot: {% cycle '-3deg' '4deg' '-2deg' '5deg' %};"
+                onclick="openNoteModal(this, event)">
                 <p>{{ note.content }}</p>
                 <div class="note-footer">
                     <div class="note-meta">
                         {{ note.created_at|date:"d/m/Y" }}<br>
                         {{ note.user.username }}
                     </div>
-                    <form action="{% url 'manage_note' note.id %}" method="post" style="display:inline;">
+                    <form action="{% url 'manage_note' note.id %}" method="post" style="display:inline;"
+                        onsubmit="return confirm('¿Estás seguro de que quieres eliminar esta nota?');">
                         {% csrf_token %}
                         <input type="hidden" name="delete" value="true">
                         <button type="submit" class="delete-btn-text">×</button>
@@ -39,6 +41,15 @@
             {% empty %}
             <p class="empty-state">Sin notas.</p>
             {% endfor %}
+        </div>
+    </div>
+
+    <!-- Note Modal -->
+    <div id="note-modal" class="modal-overlay" onclick="closeNoteModal()">
+        <div class="modal-card" onclick="event.stopPropagation()">
+            <button class="modal-close" onclick="closeNoteModal()">×</button>
+            <div id="modal-text"></div>
+            <div id="modal-meta" class="modal-meta"></div>
         </div>
     </div>
 </main>

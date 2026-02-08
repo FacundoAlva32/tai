@@ -437,3 +437,48 @@ if (moodSlider) {
         }
     });
 }
+
+// ==========================================
+// 4. Utility Toggles
+// ==========================================
+
+window.toggleNoteForm = function () {
+    const form = document.getElementById('note-form');
+    if (form) {
+        form.style.display = (form.style.display === 'none' || form.style.display === '') ? 'block' : 'none';
+    }
+};
+
+window.toggleWatchForm = function () {
+    const form = document.getElementById('watch-form');
+    if (form) {
+        form.style.display = (form.style.display === 'none' || form.style.display === '') ? 'block' : 'none';
+    }
+};
+
+window.openNoteModal = function (el, event) {
+    if (event && (event.target.closest('.delete-btn-text') || event.target.closest('form'))) {
+        return;
+    }
+    const content = el.querySelector('p').innerText;
+    const meta = el.querySelector('.note-meta').innerText;
+
+    const modal = document.getElementById('note-modal');
+    const modalContent = document.getElementById('modal-text');
+    const modalMeta = document.getElementById('modal-meta');
+
+    if (modal && modalContent) {
+        modalContent.innerText = content;
+        modalMeta.innerText = meta;
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden'; // Prevent scroll
+    }
+};
+
+window.closeNoteModal = function () {
+    const modal = document.getElementById('note-modal');
+    if (modal) {
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+};

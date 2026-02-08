@@ -5,7 +5,7 @@ import json
 
 @login_required
 def index(request):
-    notes = Note.objects.filter(user=request.user).order_by('-updated_at')
+    notes = Note.objects.all().order_by('-updated_at')
     return render(request, 'notes/index.html', {'notes': notes})
 
 @login_required
@@ -13,7 +13,7 @@ def manage_note(request, note_id=None):
     if request.method == 'POST':
         if note_id:
             # Update existing note
-            note = get_object_or_404(Note, id=note_id, user=request.user)
+            note = get_object_or_404(Note, id=note_id)
             if 'delete' in request.POST:
                 note.delete()
             else:
